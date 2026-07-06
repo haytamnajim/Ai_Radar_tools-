@@ -9,7 +9,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Toutes');
   const [sortBy, setSortBy] = useState('date'); // 'date' or 'score'
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSpeakingAll, setIsSpeakingAll] = useState(false);
+  const [speakingId, setSpeakingId] = useState(null);
 
   const categories = ['Toutes', 'Favoris', 'Outil', 'Modèle', 'Recherche', 'Financement', 'Autre'];
 
@@ -72,12 +73,22 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const toggleSpeech = () => {
-    if (isSpeaking) {
+  const getMaleVoice = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const frVoices = voices.filter(v => v.lang.startsWith('fr'));
+    const maleVoice = frVoices.find(v => /paul|thomas|male|homme|antoine|nicolas|claude/i.test(v.name));
+    return maleVoice || frVoices[0]; // Tombe sur la 1ère voix française sinon
+  };
+
+  const toggleSpeechAll = () => {
+    if (isSpeakingAll) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+      setIsSpeakingAll(false);
       return;
     }
+    
+    window.speechSynthesis.cancel();
+    setSpeakingId(null);
 
     const todayArticles = articles.filter(a => isToday(parseISO(a.date_creation)));
     if (todayArticles.length === 0) {
@@ -90,12 +101,37 @@ function App() {
 
     const utterance = new SpeechSynthesisUtterance(textToRead);
     utterance.lang = 'fr-FR';
-    utterance.rate = 0.95; // Un peu plus lent pour être bien compréhensible
+    const voice = getMaleVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.95;
     
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onend = () => setIsSpeakingAll(false);
+    utterance.onerror = () => setIsSpeakingAll(false);
     
-    setIsSpeaking(true);
+    setIsSpeakingAll(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const toggleArticleSpeech = (article) => {
+    if (speakingId === article.id) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    setIsSpeakingAll(false);
+
+    const utterance = new SpeechSynthesisUtterance(`${article.titre}. ${article.resume}`);
+    utterance.lang = 'fr-FR';
+    const voice = getMaleVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.95;
+    
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+    
+    setSpeakingId(article.id);
     window.speechSynthesis.speak(utterance);
   };
 
@@ -166,13 +202,13 @@ function App() {
               <Download size={16} /> <span style={{marginLeft: '0.25rem'}}>Export</span>
             </button>
             <button 
-              className={`action-btn ${isSpeaking ? 'text-accent' : ''}`} 
-              onClick={toggleSpeech} 
+              className={`action-btn ${isSpeakingAll ? 'text-accent' : ''}`} 
+              onClick={toggleSpeechAll} 
               title="Écouter le résumé du jour" 
               style={{ marginLeft: '0.5rem' }}
             >
-              {isSpeaking ? <Square size={16} /> : <Play size={16} />} 
-              <span style={{marginLeft: '0.25rem'}}>{isSpeaking ? 'Arrêter' : 'Écouter'}</span>
+              {isSpeakingAll ? <Square size={16} /> : <Play size={16} />} 
+              <span style={{marginLeft: '0.25rem'}}>{isSpeakingAll ? 'Arrêter' : 'Tout Écouter'}</span>
             </button>
           </div>
         </div>
@@ -270,6 +306,15 @@ function App() {
                     style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
                     <Share2 size={14} /> Partager
+                  </button>
+                  <button 
+                    className={`action-btn ${speakingId === article.id ? 'text-accent' : ''}`}
+                    onClick={() => toggleArticleSpeech(article)}
+                    title="Écouter cet article"
+                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
+                  >
+                    {speakingId === article.id ? <Square size={14} /> : <Play size={14} />} 
+                    {speakingId === article.id ? ' Stop' : ' Audio'}
                   </button>
                 </div>
               </div>
