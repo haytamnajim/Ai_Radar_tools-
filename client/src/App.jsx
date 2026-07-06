@@ -287,34 +287,29 @@ function App() {
                     className={`action-btn ${article.lu ? 'text-accent' : ''}`}
                     onClick={() => handleUpdate(article.id, { lu: !article.lu })}
                     title={article.lu ? "Marquer comme non lu" : "Marquer comme lu"}
-                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
-                    <CheckCircle size={14} /> {article.lu ? 'Lu' : 'Marquer comme lu'}
+                    <CheckCircle size={16} />
                   </button>
                   <button 
                     className={`action-btn ${article.favori ? 'text-red' : ''}`}
                     onClick={() => handleUpdate(article.id, { favori: !article.favori })}
                     title={article.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
-                    <Heart size={14} fill={article.favori ? "currentColor" : "none"} /> {article.favori ? 'Favori' : 'Sauvegarder'}
+                    <Heart size={16} fill={article.favori ? "currentColor" : "none"} />
                   </button>
                   <button 
                     className="action-btn"
                     onClick={() => handleShare(article.url)}
                     title="Partager le lien"
-                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
-                    <Share2 size={14} /> Partager
+                    <Share2 size={16} />
                   </button>
                   <button 
                     className={`action-btn ${speakingId === article.id ? 'text-accent' : ''}`}
                     onClick={() => toggleArticleSpeech(article)}
-                    title="Écouter cet article"
-                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
+                    title={speakingId === article.id ? 'Arrêter la lecture' : 'Écouter cet article'}
                   >
-                    {speakingId === article.id ? <Square size={14} /> : <Play size={14} />} 
-                    {speakingId === article.id ? ' Stop' : ' Audio'}
+                    {speakingId === article.id ? <Square size={16} /> : <Play size={16} />}
                   </button>
                 </div>
               </div>
