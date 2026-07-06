@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download } from 'lucide-react';
+import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download, Play, Square } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -9,6 +9,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Toutes');
   const [sortBy, setSortBy] = useState('date'); // 'date' or 'score'
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const categories = ['Toutes', 'Favoris', 'Outil', 'Modèle', 'Recherche', 'Financement', 'Autre'];
 
@@ -69,6 +70,33 @@ function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const toggleSpeech = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const todayArticles = articles.filter(a => isToday(parseISO(a.date_creation)));
+    if (todayArticles.length === 0) {
+      alert("Aucun article aujourd'hui à lire.");
+      return;
+    }
+
+    const textToRead = "Voici votre résumé de la veille d'aujourd'hui. " + 
+      todayArticles.map(a => `${a.titre}. ${a.resume}`).join(".   ");
+
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 0.95; // Un peu plus lent pour être bien compréhensible
+    
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleShare = async (url) => {
@@ -135,7 +163,16 @@ function App() {
             <span><Calendar size={16} /> Aujourd'hui: {stats.today}</span>
             {loading && <span style={{ marginLeft: '1rem', color: 'var(--accent)' }}><RefreshCw size={14} className="animate-spin" /> Actualisation...</span>}
             <button className="action-btn" onClick={exportDigest} title="Exporter le digest du jour en Markdown" style={{ marginLeft: '0.5rem' }}>
-              <Download size={16} /> Export
+              <Download size={16} /> <span style={{marginLeft: '0.25rem'}}>Export</span>
+            </button>
+            <button 
+              className={`action-btn ${isSpeaking ? 'text-accent' : ''}`} 
+              onClick={toggleSpeech} 
+              title="Écouter le résumé du jour" 
+              style={{ marginLeft: '0.5rem' }}
+            >
+              {isSpeaking ? <Square size={16} /> : <Play size={16} />} 
+              <span style={{marginLeft: '0.25rem'}}>{isSpeaking ? 'Arrêter' : 'Écouter'}</span>
             </button>
           </div>
         </div>
