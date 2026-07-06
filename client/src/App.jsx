@@ -209,27 +209,30 @@ function App() {
                 <time dateTime={article.date_creation}>
                   {format(parseISO(article.date_creation), 'd MMM yyyy, HH:mm', { locale: fr })}
                 </time>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <button 
                     className={`action-btn ${article.lu ? 'text-accent' : ''}`}
                     onClick={() => handleUpdate(article.id, { lu: !article.lu })}
                     title={article.lu ? "Marquer comme non lu" : "Marquer comme lu"}
+                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
-                    <CheckCircle size={16} />
+                    <CheckCircle size={14} /> {article.lu ? 'Lu' : 'Marquer comme lu'}
                   </button>
                   <button 
                     className={`action-btn ${article.favori ? 'text-red' : ''}`}
                     onClick={() => handleUpdate(article.id, { favori: !article.favori })}
                     title={article.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
-                    <Heart size={16} fill={article.favori ? "currentColor" : "none"} />
+                    <Heart size={14} fill={article.favori ? "currentColor" : "none"} /> {article.favori ? 'Favori' : 'Sauvegarder'}
                   </button>
                   <button 
                     className="action-btn"
                     onClick={() => handleShare(article.url)}
                     title="Partager le lien"
+                    style={{ fontSize: '0.75rem', fontWeight: 500 }}
                   >
-                    <Share2 size={16} />
+                    <Share2 size={14} /> Partager
                   </button>
                 </div>
               </div>
