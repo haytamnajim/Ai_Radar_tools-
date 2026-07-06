@@ -68,6 +68,26 @@ app.post('/api/articles', (req, res) => {
     res.status(201).json(newArticle);
 });
 
+// PATCH endpoint to update an article (lu, favori)
+app.patch('/api/articles/:id', (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const articles = readData();
+    const index = articles.findIndex(a => a.id === id);
+    
+    if (index === -1) {
+        return res.status(404).json({ error: 'Article non trouvé' });
+    }
+
+    // Update allowed fields
+    if (updates.hasOwnProperty('lu')) articles[index].lu = updates.lu;
+    if (updates.hasOwnProperty('favori')) articles[index].favori = updates.favori;
+
+    writeData(articles);
+    res.json(articles[index]);
+});
+
 app.listen(PORT, () => {
     console.log(`Serveur démarré sur http://localhost:${PORT}`);
     console.log(`Endpoint pour n8n (POST) : http://localhost:${PORT}/api/articles`);

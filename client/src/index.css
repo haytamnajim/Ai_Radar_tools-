@@ -286,6 +286,23 @@ body {
   color: var(--text-main);
 }
 
+.text-accent {
+  color: var(--accent) !important;
+}
+
+.text-red {
+  color: #ef4444 !important;
+}
+
+.card-lu {
+  opacity: 0.6;
+  background: var(--bg-color);
+  border-color: #1a1a1a;
+}
+.card-lu:hover {
+  opacity: 0.9;
+}
+
 /* Utilities */
 .text-center {
   text-align: center;

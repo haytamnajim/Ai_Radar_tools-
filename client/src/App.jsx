@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, Share2, Activity, Calendar } from 'lucide-react';
+import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -10,7 +10,7 @@ function App() {
   const [activeCategory, setActiveCategory] = useState('Toutes');
   const [sortBy, setSortBy] = useState('date'); // 'date' or 'score'
 
-  const categories = ['Toutes', 'Outil', 'Modèle', 'Recherche', 'Financement', 'Autre'];
+  const categories = ['Toutes', 'Favoris', 'Outil', 'Modèle', 'Recherche', 'Financement', 'Autre'];
 
   const fetchArticles = async () => {
     try {
@@ -31,6 +31,46 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleUpdate = async (id, updates) => {
+    try {
+      const res = await fetch(`/api/articles/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+    }
+  };
+
+  const exportDigest = () => {
+    const todayArticles = articles.filter(a => isToday(parseISO(a.date_creation)));
+    if (todayArticles.length === 0) {
+      alert("Aucun article aujourd'hui à exporter.");
+      return;
+    }
+
+    let mdContent = `# Digest Veille IA - ${format(new Date(), 'd MMMM yyyy', { locale: fr })}\n\n`;
+    todayArticles.forEach(a => {
+      mdContent += `## [${a.titre}](${a.url})\n`;
+      mdContent += `**Catégorie:** ${a.categorie} | **Score:** ${a.score}/10\n\n`;
+      mdContent += `${a.resume}\n\n---\n\n`;
+    });
+
+    const blob = new Blob([mdContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `digest-ia-${format(new Date(), 'yyyy-MM-dd')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleShare = async (url) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -45,7 +85,9 @@ function App() {
     let result = articles;
 
     // Filtre par catégorie
-    if (activeCategory !== 'Toutes') {
+    if (activeCategory === 'Favoris') {
+      result = result.filter(a => a.favori);
+    } else if (activeCategory !== 'Toutes') {
       result = result.filter(a => a.categorie === activeCategory);
     }
 
@@ -92,6 +134,9 @@ function App() {
             <span><Activity size={16} /> Total: {stats.total}</span>
             <span><Calendar size={16} /> Aujourd'hui: {stats.today}</span>
             {loading && <span style={{ marginLeft: '1rem', color: 'var(--accent)' }}><RefreshCw size={14} className="animate-spin" /> Actualisation...</span>}
+            <button className="action-btn" onClick={exportDigest} title="Exporter le digest du jour en Markdown" style={{ marginLeft: '0.5rem' }}>
+              <Download size={16} /> Export
+            </button>
           </div>
         </div>
         
@@ -147,7 +192,7 @@ function App() {
       ) : (
         <div className="grid">
           {filteredArticles.map(article => (
-            <article key={article.id} className="card">
+            <article key={article.id} className={`card ${article.lu ? 'card-lu' : ''}`}>
               <div className="card-header">
                 <span className="category-badge">{article.categorie}</span>
                 <span className={`score-badge ${getScoreClass(article.score)}`}>
@@ -164,13 +209,29 @@ function App() {
                 <time dateTime={article.date_creation}>
                   {format(parseISO(article.date_creation), 'd MMM yyyy, HH:mm', { locale: fr })}
                 </time>
-                <button 
-                  className="action-btn"
-                  onClick={() => handleShare(article.url)}
-                  title="Partager le lien"
-                >
-                  <Share2 size={16} />
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button 
+                    className={`action-btn ${article.lu ? 'text-accent' : ''}`}
+                    onClick={() => handleUpdate(article.id, { lu: !article.lu })}
+                    title={article.lu ? "Marquer comme non lu" : "Marquer comme lu"}
+                  >
+                    <CheckCircle size={16} />
+                  </button>
+                  <button 
+                    className={`action-btn ${article.favori ? 'text-red' : ''}`}
+                    onClick={() => handleUpdate(article.id, { favori: !article.favori })}
+                    title={article.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  >
+                    <Heart size={16} fill={article.favori ? "currentColor" : "none"} />
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => handleShare(article.url)}
+                    title="Partager le lien"
+                  >
+                    <Share2 size={16} />
+                  </button>
+                </div>
               </div>
             </article>
           ))}
