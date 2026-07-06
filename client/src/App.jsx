@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download, Play, Square } from 'lucide-react';
+import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download, Play, Square, MessageCircle } from 'lucide-react';
+import ChatWidget from './components/ChatWidget';
 import { format, isToday, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -11,6 +12,7 @@ function App() {
   const [sortBy, setSortBy] = useState('date'); // 'date' or 'score'
   const [isSpeakingAll, setIsSpeakingAll] = useState(false);
   const [speakingId, setSpeakingId] = useState(null);
+  const [currentContext, setCurrentContext] = useState(null);
 
   const categories = ['Toutes', 'Favoris', 'Outil', 'Modèle', 'Recherche', 'Financement', 'Autre'];
 
@@ -311,12 +313,24 @@ function App() {
                   >
                     {speakingId === article.id ? <Square size={16} /> : <Play size={16} />}
                   </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setCurrentContext(article)}
+                    title="Discuter de cet article avec l'IA"
+                  >
+                    <MessageCircle size={16} />
+                  </button>
                 </div>
               </div>
             </article>
           ))}
         </div>
       )}
+      
+      <ChatWidget 
+        articleContext={currentContext} 
+        clearArticleContext={() => setCurrentContext(null)} 
+      />
     </div>
   );
 }
