@@ -275,6 +275,13 @@ function App() {
                 e.dataTransfer.setData('application/json', JSON.stringify(article));
                 e.dataTransfer.effectAllowed = 'copy';
               }}
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+                e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+              }}
             >
               <div className="card-header">
                 <span className="category-badge">{article.categorie}</span>
