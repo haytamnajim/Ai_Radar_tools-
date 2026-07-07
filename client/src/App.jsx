@@ -267,7 +267,15 @@ function App() {
       ) : (
         <div className="grid">
           {filteredArticles.map(article => (
-            <article key={article.id} className={`card ${article.lu ? 'card-lu' : ''}`}>
+            <article 
+              key={article.id} 
+              className={`card ${article.lu ? 'card-lu' : ''}`}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/json', JSON.stringify(article));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+            >
               <div className="card-header">
                 <span className="category-badge">{article.categorie}</span>
                 <span className={`score-badge ${getScoreClass(article.score)}`}>
@@ -330,6 +338,7 @@ function App() {
       <ChatWidget 
         articleContext={currentContext} 
         clearArticleContext={() => setCurrentContext(null)} 
+        onArticleDrop={setCurrentContext}
       />
     </div>
   );

@@ -3,12 +3,13 @@ import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 
 const WEBHOOK_URL = 'https://primary-needlessly-dinosaur.ngrok-free.app/webhook-test/chat-radar-ia'; // Webhook n8n test
 
-export default function ChatWidget({ articleContext, clearArticleContext }) {
+export default function ChatWidget({ articleContext, clearArticleContext, onArticleDrop }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -40,6 +41,30 @@ export default function ChatWidget({ articleContext, clearArticleContext }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const data = e.dataTransfer.getData('application/json');
+      if (data && onArticleDrop) {
+        const article = JSON.parse(data);
+        onArticleDrop(article);
+      }
+    } catch (err) {
+      console.error('Erreur de drag & drop', err);
+    }
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -80,15 +105,23 @@ export default function ChatWidget({ articleContext, clearArticleContext }) {
   return (
     <>
       <button 
-        className="chat-fab"
+        className={`chat-fab ${isDragOver ? 'drag-over' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         title="Discuter avec l'IA"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
       {isOpen && (
-        <div className="chat-panel">
+        <div 
+          className={`chat-panel ${isDragOver ? 'drag-over' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <div className="chat-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Bot size={20} />
