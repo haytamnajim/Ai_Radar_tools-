@@ -200,17 +200,17 @@ function App() {
             <span><Activity size={16} /> Total: {stats.total}</span>
             <span><Calendar size={16} /> Aujourd'hui: {stats.today}</span>
             {loading && <span style={{ marginLeft: '1rem', color: 'var(--accent)' }}><RefreshCw size={14} className="animate-spin" /> Actualisation...</span>}
-            <button className="action-btn" onClick={exportDigest} title="Exporter le digest du jour en Markdown" style={{ marginLeft: '0.5rem' }}>
-              <Download size={16} /> <span style={{marginLeft: '0.25rem'}}>Export</span>
+            <button className="filter-btn" onClick={exportDigest} title="Exporter le digest du jour en Markdown" style={{ marginLeft: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <Download size={16} /> <span>Export</span>
             </button>
             <button 
-              className={`action-btn ${isSpeakingAll ? 'text-accent' : ''}`} 
+              className={`filter-btn ${isSpeakingAll ? 'active' : ''}`} 
               onClick={toggleSpeechAll} 
               title="Écouter le résumé du jour" 
-              style={{ marginLeft: '0.5rem' }}
+              style={{ marginLeft: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
             >
               {isSpeakingAll ? <Square size={16} /> : <Play size={16} />} 
-              <span style={{marginLeft: '0.25rem'}}>{isSpeakingAll ? 'Arrêter' : 'Tout Écouter'}</span>
+              <span>{isSpeakingAll ? 'Arrêter' : 'Tout Écouter'}</span>
             </button>
           </div>
         </div>
