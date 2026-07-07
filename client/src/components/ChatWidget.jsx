@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 
-const WEBHOOK_URL = 'http://localhost:5678/webhook/chat'; // Remplacez par votre URL n8n
+const WEBHOOK_URL = 'https://primary-needlessly-dinosaur.ngrok-free.app/webhook-test/chat-radar-ia'; // Webhook n8n test
 
 export default function ChatWidget({ articleContext, clearArticleContext }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,11 +66,11 @@ export default function ChatWidget({ articleContext, clearArticleContext }) {
       if (!res.ok) throw new Error('Erreur réseau');
 
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'bot', text: data.reply || 'Désolé, je n\'ai pas reçu de réponse valide.' }]);
+      setMessages(prev => [...prev, { role: 'bot', text: data.reply || 'Désolé, je n\'arrive pas à répondre pour le moment.' }]);
       
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'system', text: "Erreur : Impossible de joindre l'assistant (Vérifiez l'URL de votre Webhook n8n)." }]);
+      setMessages(prev => [...prev, { role: 'bot', text: "Désolé, je n'arrive pas à répondre pour le moment." }]);
     } finally {
       setIsTyping(false);
       if (articleContext) clearArticleContext(); // Clear context after first message is sent
@@ -102,7 +102,7 @@ export default function ChatWidget({ articleContext, clearArticleContext }) {
           <div className="chat-messages">
             {messages.length === 0 && (
               <div className="chat-empty">
-                Bonjour ! Posez-moi une question sur votre veille technologique.
+                Bonjour ! Je suis l'assistant de Radar IA, posez-moi vos questions sur les articles.
               </div>
             )}
             {messages.map((msg, idx) => (
