@@ -536,13 +536,22 @@ body {
   cursor: not-allowed;
 }
 
- . c h a t - f a b . d r a g - o v e r   { 
-     t r a n s f o r m :   s c a l e ( 1 . 1 5 ) ; 
-     b o x - s h a d o w :   0   0   2 0 p x   v a r ( - - a c c e n t ) ; 
- } 
- 
- . c h a t - p a n e l . d r a g - o v e r   { 
-     b o r d e r :   2 p x   d a s h e d   v a r ( - - a c c e n t ) ; 
-     b o x - s h a d o w :   0   0   2 0 p x   r g b a ( 5 9 ,   1 3 0 ,   2 4 6 ,   0 . 5 ) ; 
- }  
- 
+.chat-fab.drag-over {
+  transform: scale(1.15);
+  box-shadow: 0 0 20px var(--accent);
+}
+
+.chat-panel.drag-over {
+  border: 2px dashed var(--accent);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+.chat-pinned-context {
+  background: var(--bg-card-hover);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}

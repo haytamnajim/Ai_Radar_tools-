@@ -24,13 +24,7 @@ export default function ChatWidget({ articleContext, clearArticleContext, onArti
   useEffect(() => {
     if (articleContext) {
       setIsOpen(true);
-      // Avoid duplicate context messages
-      setMessages(prev => {
-        const lastMsg = prev[prev.length - 1];
-        const contextText = `Vous discutez de l'article : **${articleContext.titre}**`;
-        if (lastMsg && lastMsg.text === contextText) return prev;
-        return [...prev, { role: 'system', text: contextText }];
-      });
+      setInputValue(`Peux-tu m'expliquer l'article "${articleContext.titre}" ?`);
     }
   }, [articleContext]);
 
@@ -98,7 +92,6 @@ export default function ChatWidget({ articleContext, clearArticleContext, onArti
       setMessages(prev => [...prev, { role: 'bot', text: "Désolé, je n'arrive pas à répondre pour le moment." }]);
     } finally {
       setIsTyping(false);
-      if (articleContext) clearArticleContext(); // Clear context after first message is sent
     }
   };
 
@@ -131,6 +124,20 @@ export default function ChatWidget({ articleContext, clearArticleContext, onArti
               <X size={20} />
             </button>
           </div>
+
+          {articleContext && (
+            <div className="chat-pinned-context">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Contexte Actuel</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--accent)' }}>
+                  {articleContext.titre}
+                </div>
+              </div>
+              <button onClick={clearArticleContext} className="chat-close-btn" title="Retirer le contexte" style={{ padding: '0.25rem' }}>
+                <X size={16} />
+              </button>
+            </div>
+          )}
 
           <div className="chat-messages">
             {messages.length === 0 && (
