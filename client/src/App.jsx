@@ -1,8 +1,71 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download, Play, Square, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, RefreshCw, Share2, Activity, Calendar, Heart, CheckCircle, Download, Play, Square, MessageCircle, LayoutGrid, List, Trophy, FileText } from 'lucide-react';
 import ChatWidget from './components/ChatWidget';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, subDays, isAfter, startOfDay, isThisWeek, isThisMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+// ===== HELPER: Source badge info =====
+const SOURCE_CONFIG = {
+  'Hacker News': { label: 'HN', icon: 'Y', className: 'source-hackernews' },
+  'ArXiv':       { label: 'ArXiv', icon: '📄', className: 'source-arxiv' },
+  'Reddit':      { label: 'Reddit', icon: '🔗', className: 'source-reddit' },
+  'Web':         { label: 'Web', icon: '🌐', className: 'source-web' },
+};
+
+function getSourceConfig(source) {
+  return SOURCE_CONFIG[source] || SOURCE_CONFIG['Web'];
+}
+
+// ===== HELPER: Extract domain from URL =====
+function getDomain(url) {
+  try {
+    return new URL(url.trim()).hostname;
+  } catch {
+    return '';
+  }
+}
+
+// ===== COMPONENT: Mini Activity Chart =====
+function ActivityChart({ articles }) {
+  const chartData = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const day = startOfDay(subDays(new Date(), i));
+      const count = articles.filter(a => {
+        const d = startOfDay(parseISO(a.date_creation));
+        return d.getTime() === day.getTime();
+      }).length;
+      days.push({ day, count, label: format(day, 'EEE d', { locale: fr }) });
+    }
+    return days;
+  }, [articles]);
+
+  const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
+  return (
+    <div className="activity-chart" title="Articles par jour (7 derniers jours)">
+      {chartData.map((d, i) => (
+        <div key={i} className="activity-bar-wrapper">
+          <div className="activity-tooltip">{d.label}: {d.count}</div>
+          <div
+            className="activity-bar"
+            style={{ height: `${Math.max((d.count / maxCount) * 22, 2)}px` }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ===== COMPONENT: Source Badge =====
+function SourceBadge({ source }) {
+  const cfg = getSourceConfig(source);
+  return (
+    <span className={`source-badge ${cfg.className}`}>
+      <span>{cfg.icon}</span> {cfg.label}
+    </span>
+  );
+}
 
 function App() {
   const [articles, setArticles] = useState([]);
@@ -13,10 +76,15 @@ function App() {
   const [isSpeakingAll, setIsSpeakingAll] = useState(false);
   const [speakingId, setSpeakingId] = useState(null);
   const [currentContext, setCurrentContext] = useState(null);
+  // New states
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [minScore, setMinScore] = useState(1);
+  const [timePeriod, setTimePeriod] = useState('all'); // 'all' | 'today' | 'week' | 'month'
+  const [showTopWeek, setShowTopWeek] = useState(false);
 
   const categories = ['Toutes', 'Favoris', 'Outil', 'Modèle', 'Recherche', 'Financement', 'Autre'];
 
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       const res = await fetch('/api/articles');
       const data = await res.json();
@@ -26,14 +94,14 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Auto-refresh toutes les 60 secondes
   useEffect(() => {
     fetchArticles();
     const interval = setInterval(fetchArticles, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchArticles]);
 
   const handleUpdate = async (id, updates) => {
     try {
@@ -146,7 +214,22 @@ function App() {
     }
   };
 
-  // Filtrage et Tri
+  // ===== Category counts =====
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    categories.forEach(cat => {
+      if (cat === 'Toutes') {
+        counts[cat] = articles.length;
+      } else if (cat === 'Favoris') {
+        counts[cat] = articles.filter(a => a.favori).length;
+      } else {
+        counts[cat] = articles.filter(a => a.categorie === cat).length;
+      }
+    });
+    return counts;
+  }, [articles]);
+
+  // ===== Filtrage et Tri =====
   const filteredArticles = useMemo(() => {
     let result = articles;
 
@@ -157,13 +240,31 @@ function App() {
       result = result.filter(a => a.categorie === activeCategory);
     }
 
-    // Recherche
+    // Recherche (titre + résumé)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(a => 
         a.titre?.toLowerCase().includes(query) || 
         a.resume?.toLowerCase().includes(query)
       );
+    }
+
+    // Filtre par score minimum
+    if (minScore > 1) {
+      result = result.filter(a => (a.score || 0) >= minScore);
+    }
+
+    // Filtre par période
+    if (timePeriod !== 'all') {
+      result = result.filter(a => {
+        const date = parseISO(a.date_creation);
+        switch (timePeriod) {
+          case 'today': return isToday(date);
+          case 'week': return isThisWeek(date, { weekStartsOn: 1 });
+          case 'month': return isThisMonth(date);
+          default: return true;
+        }
+      });
     }
 
     // Tri
@@ -175,7 +276,16 @@ function App() {
     });
 
     return result;
-  }, [articles, activeCategory, searchQuery, sortBy]);
+  }, [articles, activeCategory, searchQuery, sortBy, minScore, timePeriod]);
+
+  // ===== Top de la semaine =====
+  const topWeekArticles = useMemo(() => {
+    const oneWeekAgo = subDays(new Date(), 7);
+    return [...articles]
+      .filter(a => isAfter(parseISO(a.date_creation), oneWeekAgo))
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 5);
+  }, [articles]);
 
   // Statistiques
   const stats = useMemo(() => {
@@ -190,6 +300,141 @@ function App() {
     return 'score-low';
   };
 
+  const getCardClassName = (article) => {
+    let classes = 'card';
+    if (article.lu) classes += ' card-lu';
+    if (article.source === 'ArXiv' && article.categorie === 'Recherche') {
+      classes += ' card-arxiv-research';
+    }
+    return classes;
+  };
+
+  // ===== Time period options =====
+  const timePeriods = [
+    { value: 'all', label: 'Tout' },
+    { value: 'today', label: "Aujourd'hui" },
+    { value: 'week', label: 'Cette semaine' },
+    { value: 'month', label: 'Ce mois' },
+  ];
+
+  // ===== RENDER: Card view =====
+  const renderCard = (article, extraClass = '') => (
+    <article 
+      key={article.id} 
+      className={`${getCardClassName(article)} ${extraClass}`}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify(article));
+        e.dataTransfer.effectAllowed = 'copy';
+      }}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+        e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+      }}
+    >
+      <div className="card-header">
+        <div className="badges-row">
+          <span className="category-badge">
+            {article.source === 'ArXiv' && article.categorie === 'Recherche' && <><FileText size={10} style={{ marginRight: '3px' }} /></>}
+            {article.categorie}
+          </span>
+          <SourceBadge source={article.source || 'Web'} />
+        </div>
+        <span className={`score-badge ${getScoreClass(article.score)}`}>
+          {article.score}/10
+        </span>
+      </div>
+      <h2 className="card-title">
+        <a href={article.url} target="_blank" rel="noopener noreferrer">
+          {article.titre}
+        </a>
+      </h2>
+      <p className="card-summary">{article.resume}</p>
+      <div className="card-footer">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          {getDomain(article.url) && (
+            <img 
+              className="favicon-img"
+              src={`https://www.google.com/s2/favicons?domain=${getDomain(article.url)}&sz=16`}
+              alt=""
+              loading="lazy"
+            />
+          )}
+          <time dateTime={article.date_creation}>
+            {format(parseISO(article.date_creation), 'd MMM yyyy, HH:mm', { locale: fr })}
+          </time>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button 
+            className={`action-btn ${article.lu ? 'text-accent' : ''}`}
+            onClick={() => handleUpdate(article.id, { lu: !article.lu })}
+            title={article.lu ? "Marquer comme non lu" : "Marquer comme lu"}
+          >
+            <CheckCircle size={16} />
+          </button>
+          <button 
+            className={`action-btn ${article.favori ? 'text-red' : ''}`}
+            onClick={() => handleUpdate(article.id, { favori: !article.favori })}
+            title={article.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+          >
+            <Heart size={16} fill={article.favori ? "currentColor" : "none"} />
+          </button>
+          <button 
+            className="action-btn"
+            onClick={() => handleShare(article.url)}
+            title="Partager le lien"
+          >
+            <Share2 size={16} />
+          </button>
+          <button 
+            className={`action-btn ${speakingId === article.id ? 'text-accent' : ''}`}
+            onClick={() => toggleArticleSpeech(article)}
+            title={speakingId === article.id ? 'Arrêter la lecture' : 'Écouter cet article'}
+          >
+            {speakingId === article.id ? <Square size={16} /> : <Play size={16} />}
+          </button>
+          <button 
+            className="action-btn"
+            onClick={() => setCurrentContext(article)}
+            title="Discuter de cet article avec l'IA"
+          >
+            <MessageCircle size={16} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+
+  // ===== RENDER: List item =====
+  const renderListItem = (article) => (
+    <div key={article.id} className={`list-item ${article.lu ? 'card-lu' : ''}`}>
+      <div className="list-item-title">
+        <a href={article.url} target="_blank" rel="noopener noreferrer">
+          {getDomain(article.url) && (
+            <img 
+              className="favicon-img"
+              src={`https://www.google.com/s2/favicons?domain=${getDomain(article.url)}&sz=16`}
+              alt=""
+              loading="lazy"
+            />
+          )}
+          {article.titre}
+        </a>
+      </div>
+      <SourceBadge source={article.source || 'Web'} />
+      <span className={`score-badge ${getScoreClass(article.score)}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }}>
+        {article.score}/10
+      </span>
+      <span className="list-item-meta list-hide-mobile">{article.categorie}</span>
+      <span className="list-item-meta">
+        {format(parseISO(article.date_creation), 'd MMM', { locale: fr })}
+      </span>
+    </div>
+  );
+
   return (
     <div className="container">
       {/* HEADER */}
@@ -197,7 +442,10 @@ function App() {
         <div className="logo-section">
           <h1>Radar IA</h1>
           <div className="stats">
-            <span><Activity size={16} /> Total: {stats.total}</span>
+            <span>
+              <Activity size={16} /> Total: {stats.total}
+              <ActivityChart articles={articles} />
+            </span>
             <span><Calendar size={16} /> Aujourd'hui: {stats.today}</span>
             {loading && <span style={{ marginLeft: '1rem', color: 'var(--accent)' }}><RefreshCw size={14} className="animate-spin" /> Actualisation...</span>}
             <button className="filter-btn" onClick={exportDigest} title="Exporter le digest du jour en Markdown" style={{ marginLeft: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -219,7 +467,7 @@ function App() {
           <Search size={18} />
           <input 
             type="text" 
-            placeholder="Rechercher un article..." 
+            placeholder="Rechercher un article (titre ou résumé)..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -236,10 +484,37 @@ function App() {
               onClick={() => setActiveCategory(cat)}
             >
               {cat}
+              <span className="filter-count">({categoryCounts[cat] || 0})</span>
             </button>
           ))}
+          <button
+            className={`filter-btn top-week-toggle ${showTopWeek ? 'active' : ''}`}
+            onClick={() => setShowTopWeek(prev => !prev)}
+            title="Top 5 articles de la semaine"
+          >
+            <Trophy size={14} style={{ marginRight: '0.25rem' }} />
+            Top Semaine
+          </button>
         </div>
-        <div className="sort-selector">
+        <div className="sort-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* View toggle */}
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Vue grille"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="Vue liste"
+            >
+              <List size={16} />
+            </button>
+          </div>
+
           <select 
             value={sortBy} 
             onChange={(e) => setSortBy(e.target.value)}
@@ -259,86 +534,65 @@ function App() {
         </div>
       </div>
 
-      {/* GRID */}
+      {/* ROW 2: Score slider + Time period */}
+      <div className="controls-row2">
+        {/* Time period */}
+        <div className="time-filters">
+          {timePeriods.map(tp => (
+            <button
+              key={tp.value}
+              className={`time-filter-btn ${timePeriod === tp.value ? 'active' : ''}`}
+              onClick={() => setTimePeriod(tp.value)}
+            >
+              {tp.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Score slider */}
+        <div className="score-slider-container">
+          <span>Score min:</span>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={minScore}
+            onChange={(e) => setMinScore(Number(e.target.value))}
+          />
+          <span className="score-slider-label">{minScore}</span>
+        </div>
+      </div>
+
+      {/* TOP WEEK SECTION */}
+      {showTopWeek && topWeekArticles.length > 0 && (
+        <div className="top-week-section">
+          <div className="top-week-header">
+            <Trophy size={20} style={{ color: '#fbbf24' }} />
+            <h2>Top de la Semaine</h2>
+          </div>
+          <div className="top-week-grid">
+            {topWeekArticles.map((article, idx) => (
+              <div key={article.id} style={{ position: 'relative' }}>
+                <span className="top-week-rank">#{idx + 1}</span>
+                {renderCard(article, 'top-week-card')}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* GRID / LIST */}
       {filteredArticles.length === 0 ? (
         <div className="text-center py-8 empty-state">
           Aucun article trouvé pour ces critères.
         </div>
+      ) : viewMode === 'list' ? (
+        <div className="list-view">
+          {filteredArticles.map(renderListItem)}
+        </div>
       ) : (
         <div className="grid">
-          {filteredArticles.map(article => (
-            <article 
-              key={article.id} 
-              className={`card ${article.lu ? 'card-lu' : ''}`}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/json', JSON.stringify(article));
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
-                e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
-              }}
-            >
-              <div className="card-header">
-                <span className="category-badge">{article.categorie}</span>
-                <span className={`score-badge ${getScoreClass(article.score)}`}>
-                  {article.score}/10
-                </span>
-              </div>
-              <h2 className="card-title">
-                <a href={article.url} target="_blank" rel="noopener noreferrer">
-                  {article.titre}
-                </a>
-              </h2>
-              <p className="card-summary">{article.resume}</p>
-              <div className="card-footer">
-                <time dateTime={article.date_creation}>
-                  {format(parseISO(article.date_creation), 'd MMM yyyy, HH:mm', { locale: fr })}
-                </time>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button 
-                    className={`action-btn ${article.lu ? 'text-accent' : ''}`}
-                    onClick={() => handleUpdate(article.id, { lu: !article.lu })}
-                    title={article.lu ? "Marquer comme non lu" : "Marquer comme lu"}
-                  >
-                    <CheckCircle size={16} />
-                  </button>
-                  <button 
-                    className={`action-btn ${article.favori ? 'text-red' : ''}`}
-                    onClick={() => handleUpdate(article.id, { favori: !article.favori })}
-                    title={article.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-                  >
-                    <Heart size={16} fill={article.favori ? "currentColor" : "none"} />
-                  </button>
-                  <button 
-                    className="action-btn"
-                    onClick={() => handleShare(article.url)}
-                    title="Partager le lien"
-                  >
-                    <Share2 size={16} />
-                  </button>
-                  <button 
-                    className={`action-btn ${speakingId === article.id ? 'text-accent' : ''}`}
-                    onClick={() => toggleArticleSpeech(article)}
-                    title={speakingId === article.id ? 'Arrêter la lecture' : 'Écouter cet article'}
-                  >
-                    {speakingId === article.id ? <Square size={16} /> : <Play size={16} />}
-                  </button>
-                  <button 
-                    className="action-btn"
-                    onClick={() => setCurrentContext(article)}
-                    title="Discuter de cet article avec l'IA"
-                  >
-                    <MessageCircle size={16} />
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+          {filteredArticles.map(article => renderCard(article))}
         </div>
       )}
       
