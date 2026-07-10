@@ -572,7 +572,7 @@ function App() {
           </div>
           <div className="top-week-grid">
             {topWeekArticles.map((article, idx) => (
-              <div key={article.id} style={{ position: 'relative' }}>
+              <div key={article.id} style={{ position: 'relative', height: '100%' }}>
                 <span className="top-week-rank">#{idx + 1}</span>
                 {renderCard(article, 'top-week-card')}
               </div>
