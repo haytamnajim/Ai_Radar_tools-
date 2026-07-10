@@ -44,7 +44,7 @@ app.get('/api/articles', (req, res) => {
 
 // POST endpoint to add a new article
 app.post('/api/articles', (req, res) => {
-    const { titre, url, score, categorie, resume, date_creation } = req.body;
+    const { titre, url, score, categorie, resume, date_creation, source } = req.body;
     
     // Basic validation
     if (!titre || !url) {
@@ -58,7 +58,10 @@ app.post('/api/articles', (req, res) => {
         score: score ? Number(score) : 0,
         categorie: categorie || 'Autre',
         resume: resume || '',
-        date_creation: date_creation || new Date().toISOString()
+        date_creation: date_creation || new Date().toISOString(),
+        source: source || 'Web',
+        favori: false,
+        lu: false
     };
 
     const articles = readData();
@@ -83,6 +86,7 @@ app.patch('/api/articles/:id', (req, res) => {
     // Update allowed fields
     if (updates.hasOwnProperty('lu')) articles[index].lu = updates.lu;
     if (updates.hasOwnProperty('favori')) articles[index].favori = updates.favori;
+    if (updates.hasOwnProperty('source')) articles[index].source = updates.source;
 
     writeData(articles);
     res.json(articles[index]);
