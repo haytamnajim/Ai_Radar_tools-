@@ -474,30 +474,23 @@ function App() {
         </div>
       </header>
 
-      {/* CONTROLS */}
-      <div className="controls">
-        <div className="filters">
-          {categories.map(cat => (
-            <button 
-              key={cat}
-              className={`filter-btn ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
-            >
-              {cat}
-              <span className="filter-count">({categoryCounts[cat] || 0})</span>
-            </button>
-          ))}
-          <button
-            className={`filter-btn top-week-toggle ${showTopWeek ? 'active' : ''}`}
-            onClick={() => setShowTopWeek(prev => !prev)}
-            title="Top 5 articles de la semaine"
-          >
-            <Trophy size={14} style={{ marginRight: '0.25rem' }} />
-            Top Semaine
-          </button>
-        </div>
-        <div className="sort-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* View toggle */}
+      {/* CONTROL PANEL */}
+      <div className="control-panel">
+        {/* ROW 1: Categories & View Toggle */}
+        <div className="control-row">
+          <div className="filters">
+            {categories.map(cat => (
+              <button 
+                key={cat}
+                className={`filter-btn ${activeCategory === cat ? 'active' : ''}`}
+                onClick={() => setActiveCategory(cat)}
+              >
+                {cat}
+                <span className="filter-count">({categoryCounts[cat] || 0})</span>
+              </button>
+            ))}
+          </div>
+          
           <div className="view-toggle">
             <button
               className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
@@ -514,52 +507,57 @@ function App() {
               <List size={16} />
             </button>
           </div>
-
-          <select 
-            value={sortBy} 
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              background: 'var(--bg-card)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-color)',
-              padding: '0.5rem',
-              borderRadius: 'var(--radius-sm)',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="date">Trier par date (récent)</option>
-            <option value="score">Trier par score (pertinent)</option>
-          </select>
         </div>
-      </div>
 
-      {/* ROW 2: Score slider + Time period */}
-      <div className="controls-row2">
-        {/* Time period */}
-        <div className="time-filters">
-          {timePeriods.map(tp => (
+        <div className="control-divider" />
+
+        {/* ROW 2: Top Week, Time Filters, Score, Sort */}
+        <div className="control-row">
+          <div className="control-group">
             <button
-              key={tp.value}
-              className={`time-filter-btn ${timePeriod === tp.value ? 'active' : ''}`}
-              onClick={() => setTimePeriod(tp.value)}
+              className={`filter-btn top-week-toggle ${showTopWeek ? 'active' : ''}`}
+              onClick={() => setShowTopWeek(prev => !prev)}
+              title="Top 5 articles de la semaine"
             >
-              {tp.label}
+              <Trophy size={14} style={{ marginRight: '0.35rem' }} />
+              Top Semaine
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* Score slider */}
-        <div className="score-slider-container">
-          <span>Score min:</span>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            value={minScore}
-            onChange={(e) => setMinScore(Number(e.target.value))}
-          />
-          <span className="score-slider-label">{minScore}</span>
+          <div className="control-group">
+            <div className="time-filters">
+              {timePeriods.map(tp => (
+                <button
+                  key={tp.value}
+                  className={`time-filter-btn ${timePeriod === tp.value ? 'active' : ''}`}
+                  onClick={() => setTimePeriod(tp.value)}
+                >
+                  {tp.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="score-slider-container">
+              <span>Score min:</span>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={minScore}
+                onChange={(e) => setMinScore(Number(e.target.value))}
+              />
+              <span className="score-slider-label">{minScore}</span>
+            </div>
+
+            <select 
+              className="sort-select"
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="date">Trier par date (récent)</option>
+              <option value="score">Trier par score (pertinent)</option>
+            </select>
+          </div>
         </div>
       </div>
 
