@@ -441,36 +441,49 @@ function App() {
       <header className="header">
         <div className="logo-section">
           <h1>Radar IA</h1>
-          <div className="stats">
-            <span>
-              <Activity size={16} /> Total: {stats.total}
+          <div className="header-stats">
+            <div className="stat-badge">
+              <Activity size={14} /> 
+              <span>Total: {stats.total}</span>
               <ActivityChart articles={articles} />
-            </span>
-            <span><Calendar size={16} /> Aujourd'hui: {stats.today}</span>
-            {loading && <span style={{ marginLeft: '1rem', color: 'var(--accent)' }}><RefreshCw size={14} className="animate-spin" /> Actualisation...</span>}
-            <button className="filter-btn" onClick={exportDigest} title="Exporter le digest du jour en Markdown" style={{ marginLeft: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            </div>
+            <div className="stat-badge">
+              <Calendar size={14} /> 
+              <span>Aujourd'hui: {stats.today}</span>
+            </div>
+            {loading && (
+              <div className="stat-badge" style={{ color: 'var(--accent)', borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+                <RefreshCw size={14} className="animate-spin" /> 
+                <span>Actualisation...</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="header-actions">
+          <div className="header-buttons">
+            <button className="action-button" onClick={exportDigest} title="Exporter le digest du jour en Markdown">
               <Download size={16} /> <span>Export</span>
             </button>
             <button 
-              className={`filter-btn ${isSpeakingAll ? 'active' : ''}`} 
+              className={`action-button ${isSpeakingAll ? 'active' : 'primary'}`} 
               onClick={toggleSpeechAll} 
-              title="Écouter le résumé du jour" 
-              style={{ marginLeft: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              title="Écouter le résumé du jour"
             >
               {isSpeakingAll ? <Square size={16} /> : <Play size={16} />} 
               <span>{isSpeakingAll ? 'Arrêter' : 'Tout Écouter'}</span>
             </button>
           </div>
-        </div>
-        
-        <div className="search-bar">
-          <Search size={18} />
-          <input 
-            type="text" 
-            placeholder="Rechercher un article (titre ou résumé)..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          
+          <div className="search-bar">
+            <Search size={18} />
+            <input 
+              type="text" 
+              placeholder="Rechercher un article (titre ou résumé)..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </header>
 
